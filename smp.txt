@@ -1,5 +1,5 @@
 def extract_and_format(data):
-  """Extracts all values from a nested list and formats them.
+  """Extracts all values from a nested list and formats them, handling various structures.
 
   Args:
     data: The nested list containing the data.
@@ -9,11 +9,13 @@ def extract_and_format(data):
   """
   extracted_values = []
 
-  # Assuming the structure of your provided list (adjust indexing if needed)
-  for item in data[1][0][2]:  
-    for sub_item in item:
-      key = sub_item[0]
-      value = sub_item[1][0]
-      extracted_values.append(f"{key}={value}")
+  def extract_from_sublist(sub_data):
+    for item in sub_data:
+      if isinstance(item, list):
+        extract_from_sublist(item)  # Recursive call for nested lists
+      else:
+        key, value_type, value = item
+        extracted_values.append(f"{key}={value}")
 
+  extract_from_sublist(data)  # Start extraction from the main data
   return "; ".join(extracted_values)
