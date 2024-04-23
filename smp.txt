@@ -13,7 +13,19 @@ def extract_values(data):
   value_555 = None
   all_sub_items = []
 
-  for item in data['comparison']:
+  # Check if data is a dictionary
+  if isinstance(data, dict):
+    # Try to access the 'comparison' key
+    try:
+      data_list = data['comparison']
+    except KeyError:
+      print("Error: 'comparison' key not found in the dictionary.")
+      return None, None  # Or handle the error differently as needed
+  else:
+    # Assume data is already a list
+    data_list = data
+
+  for item in data_list:
     if item[0] == 555:
       value_555 = item
       # Access the sub-items dynamically 
