@@ -1,21 +1,10 @@
-def extract_and_format(data):
-  """Extracts all values from a nested list and formats them, handling various structures.
+extracted_data = {}
+for sublist in data:
+    for item in sublist[1]:
+        key = item[0]
+        value_type = item[1][0]
+        value = item[1][2]
+        if value_type in ['str', 'int', 'float']:
+            extracted_data[key] = value
 
-  Args:
-    data: The nested list containing the data.
-
-  Returns:
-    A string with extracted values in the format "key=value; key=value; ..."
-  """
-  extracted_values = []
-
-  def extract_from_sublist(sub_data):
-    for item in sub_data:
-      if isinstance(item, list):
-        extract_from_sublist(item)  # Recursive call for nested lists
-      else:
-        key, value_type, value = item
-        extracted_values.append(f"{key}={value}")
-
-  extract_from_sublist(data)  # Start extraction from the main data
-  return "; ".join(extracted_values)
+print("; ".join([f"{k}={v}" for k, v in extracted_data.items()]))
