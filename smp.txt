@@ -17,16 +17,20 @@ def extract_values(data):
     if item[0] == 555:
       value_555 = item
       # Access the sub-items dynamically 
-      sub_items_list = value_555[3]  # Assuming the sub-items are within the 4th element
+      sub_items_list = value_555[3]  
       
       # Check if it's a list of lists (multiple entries for 555)
       if isinstance(sub_items_list[0], list): 
-        sub_items_list = sub_items_list[0]  # Access the first list of sub-items
+        sub_items_list = sub_items_list[0] 
 
       for sub_item in sub_items_list:
-        sub_item_index = sub_item[0]
-        sub_item_value = sub_item[1][0]
-        all_sub_items.append((sub_item_index, sub_item_value))
-      break
+        # Check if sub_item is a list before indexing
+        if isinstance(sub_item, list): 
+          sub_item_index = sub_item[0]
+          sub_item_value = sub_item[1][0]
+          all_sub_items.append((sub_item_index, sub_item_value))
+        else:
+          # Handle cases where sub_item is not a list (e.g., an integer)
+          print(f"Skipping non-list sub-item: {sub_item}")  
 
   return value_555, all_sub_items
