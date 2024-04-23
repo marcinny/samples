@@ -1,10 +1,7 @@
 extracted_data = {}
-for sublist in data:
+for sublist in data[1]:
     for item in sublist[1]:
-        key = item[0]
-        value_type = item[1][0]
-        value = item[1][2]
-        if value_type in ['str', 'int', 'float']:
-            extracted_data[key] = value
+        extracted_data[item[0]] = item[1][2]
 
-print("; ".join([f"{k}={v}" for k, v in extracted_data.items()]))
+parsed_data = "; ".join([f"{k}={v}" for k, v in extracted_data.items()])
+print(parsed_data
