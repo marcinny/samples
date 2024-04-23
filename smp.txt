@@ -1,0 +1,32 @@
+samples
+
+def extract_values(data):
+  """Extracts specific values from a nested list, including all sub-items.
+
+  Args:
+    data: The nested list containing the data.
+
+  Returns:
+    A tuple containing the value 555 and a list of all sub-items 
+    with their corresponding indices and values.
+  """
+  value_555 = None
+  all_sub_items = []
+
+  for item in data['comparison']:
+    if item[0] == 555:
+      value_555 = item
+      # Access the sub-items dynamically 
+      sub_items_list = value_555[3]  # Assuming the sub-items are within the 4th element
+      
+      # Check if it's a list of lists (multiple entries for 555)
+      if isinstance(sub_items_list[0], list): 
+        sub_items_list = sub_items_list[0]  # Access the first list of sub-items
+
+      for sub_item in sub_items_list:
+        sub_item_index = sub_item[0]
+        sub_item_value = sub_item[1][0]
+        all_sub_items.append((sub_item_index, sub_item_value))
+      break
+
+  return value_555, all_sub_items
