@@ -1,48 +1,19 @@
-samples
-
-def extract_values(data):
-  """Extracts specific values from a nested list, including all sub-items.
+def extract_and_format(data):
+  """Extracts all values from a nested list and formats them.
 
   Args:
     data: The nested list containing the data.
 
   Returns:
-    A tuple containing the value 555 and a list of all sub-items 
-    with their corresponding indices and values.
+    A string with extracted values in the format "key=value; key=value; ..."
   """
-  value_555 = None
-  all_sub_items = []
+  extracted_values = []
 
-  # Check if data is a dictionary
-  if isinstance(data, dict):
-    # Try to access the 'comparison' key
-    try:
-      data_list = data['comparison']
-    except KeyError:
-      print("Error: 'comparison' key not found in the dictionary.")
-      return None, None  # Or handle the error differently as needed
-  else:
-    # Assume data is already a list
-    data_list = data
+  # Assuming the structure of your provided list (adjust indexing if needed)
+  for item in data[1][0][2]:  
+    for sub_item in item:
+      key = sub_item[0]
+      value = sub_item[1][0]
+      extracted_values.append(f"{key}={value}")
 
-  for item in data_list:
-    if item[0] == 555:
-      value_555 = item
-      # Access the sub-items dynamically 
-      sub_items_list = value_555[3]  
-      
-      # Check if it's a list of lists (multiple entries for 555)
-      if isinstance(sub_items_list[0], list): 
-        sub_items_list = sub_items_list[0] 
-
-      for sub_item in sub_items_list:
-        # Check if sub_item is a list before indexing
-        if isinstance(sub_item, list): 
-          sub_item_index = sub_item[0]
-          sub_item_value = sub_item[1][0]
-          all_sub_items.append((sub_item_index, sub_item_value))
-        else:
-          # Handle cases where sub_item is not a list (e.g., an integer)
-          print(f"Skipping non-list sub-item: {sub_item}")  
-
-  return value_555, all_sub_items
+  return "; ".join(extracted_values)
