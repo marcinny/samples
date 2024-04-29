@@ -1,10 +1,53 @@
-extracted_data = {}
-for sublist in data[1]:
-    for item in sublist[1]:
-        try:
-            extracted_data[item[0]] = item[1][2]
-        except (IndexError, TypeError):
-            continue
+import openpyxl
+import datetime
 
-parsed_data = "; ".join([f"{k}={v}" for k, v in extracted_data.items()])
-print(parsed_data)
+def search_jiras(issue_types, impacted_region=None, globalwb=None):
+    global global_header
+    resultxls = openpyxl.Workbook()
+
+    wb_cases = resultxls.active
+
+    # Define the column headers and their corresponding JIRA fields
+    column_mappings = {
+        "Jira key": "key",
+        "Jira type": "fields.issuetype.name",
+        "Jira status": "fields.status.name",
+        "Jira summary": "fields.summary",
+        "Jira description": "fields.description",
+        "Impacted region": "fields.customfield_27190",
+        "Impacted BU": "fields.customfield_27090",
+        "Analysis Style": "fields.customfield_33393",
+        "Event": "fields.customfield_33392",
+        "Previous Review": "fields.customfield_33394",
+        "ATGF date": "fields.customfield_22893",
+        "Start Date": "fields.customfield_30791",
+        "Completed Date": "fields.customfield_11623",
+        "Analysis Last Comment": "fields.customfield_27592"
+    }
+
+    # Write column headers to Excel file
+    wb_cases.append(list(column_mappings.keys()))
+
+    # Execute JIRA query
+    jql_query = f'project = atv AND issuetype in ("{issue_types_str}")'
+    if impacted_region:
+        jql_query += f' AND "Impacted Region" ="{impacted_region}"'
+    issue_search_results = jira_obj.search_issues(jql_query, maxResults=500)
+
+    if not issue_search_results:
+        logger.debug('Did not find any.')
+        return
+
+    for issue in issue_search_results:
+        row_values = []
+        for column_header, jira_field in column_mappings.items():
+            value = getattr(issue, jira_field) if '.' in jira_field else getattr(issue.fields, jira_field)
+            value = value if value else "None"
+            row_values.append(value)
+
+        wb_cases.append(row_values)
+
+    # Save Excel file based on issue_types and impacted_region
+    issue_types_str_cleaned = '_'.join([it.replace(' ', '_') for it in issue_types])
+    impacted_region_str = impacted_region.replace(' ', '_') if impacted_region else 'All_Regions'
+    resultxls.save(f"jira_results_{issue_types_str_cleaned}_{impacted_region_str}.xlsx")
