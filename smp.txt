@@ -50,6 +50,10 @@ def parse_all_models(models_list):
     wb_mcs.append(header)
     
     for model in models_list:
+        algo_status = model.get("workflow", {}).get("status", {}).get("code", "NA").upper()
+        if algo_status == 'ARCHIVED':
+            continue  # Skip models with status 'ARCHIVED'
+        
         excel_line = []
         for header, extractor in header_to_model_mapping:
             value = extractor(model)
