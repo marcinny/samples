@@ -1,82 +1,70 @@
-import openpyxl
-import datetime
-
-def search_jiras(issue_types, impacted_region=None, globalwb=None):
-    global global_header
-    resultxls = openpyxl.Workbook()
-
-    wb_cases = resultxls.active
-
-    # Define the column headers and their corresponding JIRA fields
-    column_mappings = {
-        "Jira key": "key",
-        "Jira type": "fields.issuetype.name",
-        "Jira status": "fields.status.name",
-        "Jira summary": "fields.summary",
-        "Jira description": "fields.description",
-        "Impacted region": "fields.customfield_27190",
-        "Impacted BU": "fields.customfield_27090",
-        "Analysis Style": "fields.customfield_33393",
-        "Event": "fields.customfield_33392",
-        "Previous Review": "fields.customfield_33394",
-        "ATGF date": "fields.customfield_22893",
-        "Start Date": "fields.customfield_30791",
-        "Completed Date": "fields.customfield_11623",
-        "Analysis Last Comment": "fields.customfield_27592"
-    }
-
-    # Write column headers to Excel file
-    wb_cases.append(list(column_mappings.keys()))
-
-    # Execute JIRA query
-    jql_query = f'project = atv AND issuetype in ("{issue_types_str}")'
-    if impacted_region:
-        jql_query += f' AND "Impacted Region" ="{impacted_region}"'
-    issue_search_results = jira_obj.search_issues(jql_query, maxResults=500)
-
-    if not issue_search_results:
-        logger.debug('Did not find any.')
-        return
-
-    for issue in issue_search_results:
-        row_values = []
-        for column_header, jira_field in column_mappings.items():
-            value = getattr(issue, jira_field) if '.' in jira_field else getattr(issue.fields, jira_field)
-            value = value if value else "None"
-            row_values.append(value)
-
-        wb_cases.append(row_values)
-
-    # Save Excel file based on issue_types and impacted_region
-    issue_types_str_cleaned = '_'.join([it.replace(' ', '_') for it in issue_types])
-    impacted_region_str = impacted_region.replace(' ', '_') if impacted_region else 'All_Regions'
-    resultxls.save(f"jira_results_{issue_types_str_cleaned}_{impacted_region_str}.xlsx")
-
-import datetime
-
-def get_start_and_end_date(year, week):
-    # Find the first day of the year
-    first_day = datetime.date(year, 1, 1)
-
-    # Find the first day of the first week
-    if first_day.weekday() <= 3:
-        start_of_week = first_day - datetime.timedelta(days=first_day.weekday())
-    else:
-        start_of_week = first_day + datetime.timedelta(days=7 - first_day.weekday())
-
-    # Find the start date and end date of the requested week
-    start_date = start_of_week + datetime.timedelta(weeks=week-1)
-    end_date = start_date + datetime.timedelta(days=6)
+def parse_all_models(models_list):
+    import openpyxl
+    import datetime
     
-    return start_date, end_date
-
-# Input year and ISO week number
-year = int(input("Enter year: "))
-week = int(input("Enter ISO week number: "))
-
-# Calculate start date and end date
-start_date, end_date = get_start_and_end_date(year, week)
-
-# Print start date and end date
-print(f"Start date of week {week} in {year}: {start_date}")
-print(f"End date of week {week} in {year}: {end_date}")
+    header_to_model_mapping = {
+        "algo name": ["name"],
+        "Model ID": ["id"],
+        "Algo ID": ["refId"],
+        "algoSystem": None,  # This will be added separately as it's not directly in model
+        "algo status": ["workflow", "status", "code"],
+        "modelClass": ["modelClass", "code"],
+        "BusinessUnit": ["businessUnit", "label"],
+        "BusinessUnitPath": ["businessUnitPath"],
+        "Complexity": ["complexity", "label"],
+        "EPCount": None,  # Assuming EPCount is a separate computation
+        "eonIds": ["info", "eonIds"],
+        "algoType": ["info", "algoType", "label"],
+        "Algo SPECIALIST": None,  # This will be processed separately
+        "entities": None,  # Assuming this is not directly in model or needs processing
+        "Countries Traded": ["info", "countriesAndMarketsTraded"],
+        "regionsTraded": ["info", "regionsTraded"],
+        "productsTraded": ["info", "productsTraded"],
+        "exchangeVenues Traded": ["info", "exchangeVenuesTraded"],
+        "MSS inventory": None,  # This will be computed using get_market_stress
+        "Controls Native": None,  # This will be computed using get_controls
+        "Controls Non-Native": None  # This will be computed using get_controls
+    }
+    
+    resultxls = openpyxl.Workbook()
+    wb_mcs = resultxls.active
+    header = list(header_to_model_mapping.keys())
+    wb_mcs.append(header)
+    
+    for model in models_list:
+        excel_line = []
+        for key in header:
+            if header_to_model_mapping[key]:
+                value = model
+                for subkey in header_to_model_mapping[key]:
+                    value = value.get(subkey, "NA")
+                    if value == "NA":
+                        break
+                if isinstance(value, list):
+                    value = ", ".join(value)
+                elif value is None:
+                    value = "NA"
+            else:
+                value = "NA"
+                if key == "algoSystem":
+                    value = model.get("modelClass", {}).get("code", "NA")
+                elif key == "EPCount":
+                    value = "Computed Value"  # Example placeholder for computed value
+                elif key == "Algo SPECIALIST":
+                    algo_roles = model.get('roles', [])
+                    specialists = []
+                    for roleType in algo_roles:
+                        if roleType.get('roleType', {}).get('code') == "SPECIALIST":
+                            specialists.extend([lg.get("fullName") for lg in roleType.get('users', []) if lg.get("fullName")])
+                    value = ", ".join(specialists) if specialists else "NA"
+                elif key == "MSS inventory":
+                    value = get_market_stress(model.get("components", []))
+                elif key in ["Controls Native", "Controls Non-Native"]:
+                    ctrls, ctrls_non = get_controls(model.get("components", []))
+                    value = ctrls if key == "Controls Native" else ctrls_non
+            excel_line.append(value)
+        wb_mcs.append(excel_line)
+    
+    filename_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    resultxls.save(f"mes_results_{filename_date}.xlsx")
+    resultxls.close()
