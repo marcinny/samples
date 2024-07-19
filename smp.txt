@@ -1,1 +1,46 @@
-nice
+import openpyxl
+import datetime
+
+def parse_all_models(models_list):
+    resultxls = openpyxl.Workbook()
+    main_sheet = resultxls.active
+    main_sheet.title = "All Data"
+    
+    # Create header
+    header = [item[0] for item in header_to_model_mapping]
+    main_sheet.append(header)
+    
+    # Create a new sheet for filtered data
+    filtered_sheet = resultxls.create_sheet(title="Filtered Data")
+    filtered_sheet.append(header)
+    
+    for model in models_list:
+        algo_status = model.get("workflow", {}).get("status", {}).get("code", "").upper()
+        ep_count = model.get("EPCount", 0)
+        
+        if algo_status == 'ARCHIVED':
+            excel_line = [
+                model.get("name", ""),
+                model.get("id", ""),
+                model.get("modelClass", {}).get("code", ""),
+                algo_status
+            ] + [""] * (len(header) - 4)
+        else:
+            excel_line = []
+            for header, extractor in header_to_model_mapping:
+                try:
+                    value = extractor(model)
+                except AttributeError:
+                    value = ""
+                excel_line.append(value)
+        
+        # Append to main sheet
+        main_sheet.append(excel_line)
+        
+        # Append to filtered sheet if criteria are met
+        if algo_status != 'ARCHIVED' or (algo_status == 'DRAFT' and ep_count > 0):
+            filtered_sheet.append(excel_line)
+    
+    filename_date = datetime.datetime.now().strftime('%Y-%m-%d')
+    resultxls.save(f"mes_results_{filename_date}.xlsx")
+    resultxls.close()
