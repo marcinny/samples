@@ -1,46 +1,57 @@
-import openpyxl
-import datetime
+import re
 
-def parse_all_models(models_list):
-    resultxls = openpyxl.Workbook()
-    main_sheet = resultxls.active
-    main_sheet.title = "All Data"
-    
-    # Create header
-    header = [item[0] for item in header_to_model_mapping]
-    main_sheet.append(header)
-    
-    # Create a new sheet for filtered data
-    filtered_sheet = resultxls.create_sheet(title="Filtered Data")
-    filtered_sheet.append(header)
-    
-    for model in models_list:
-        algo_status = model.get("workflow", {}).get("status", {}).get("code", "").upper()
-        ep_count = model.get("EPCount", 0)
-        
-        if algo_status == 'ARCHIVED':
-            excel_line = [
-                model.get("name", ""),
-                model.get("id", ""),
-                model.get("modelClass", {}).get("code", ""),
-                algo_status
-            ] + [""] * (len(header) - 4)
-        else:
-            excel_line = []
-            for header, extractor in header_to_model_mapping:
-                try:
-                    value = extractor(model)
-                except AttributeError:
-                    value = ""
-                excel_line.append(value)
-        
-        # Append to main sheet
-        main_sheet.append(excel_line)
-        
-        # Append to filtered sheet if criteria are met
-        if algo_status != 'ARCHIVED' or (algo_status == 'DRAFT' and ep_count > 0):
-            filtered_sheet.append(excel_line)
-    
-    filename_date = datetime.datetime.now().strftime('%Y-%m-%d')
-    resultxls.save(f"mes_results_{filename_date}.xlsx")
-    resultxls.close()
+def extract_sections(text):
+    # Define regex patterns for "Drivers:" and "Checks:"
+    drivers_pattern = r"Drivers:\s*((?:[^\n]+\n?)*)"
+    checks_pattern = r"Checks:\s*((?:[^\n]+\n?)*)"
+
+    # Extract drivers section
+    drivers_match = re.search(drivers_pattern, text, re.DOTALL)
+    drivers_section = drivers_match.group(1).strip() if drivers_match else ""
+
+    # Extract checks section
+    checks_match = re.search(checks_pattern, text, re.DOTALL)
+    checks_section = checks_match.group(1).strip() if checks_match else ""
+
+    # Convert sections into dictionaries for easier use
+    drivers = parse_section(drivers_section)
+    checks = parse_section(checks_section)
+
+    return drivers, checks
+
+def parse_section(section):
+    """
+    Parse a section of the text to a dictionary.
+    """
+    lines = section.splitlines()
+    result = {}
+    for line in lines:
+        if line.strip():
+            key, value = line.split(':', 1)
+            result[key.strip()] = value.strip()
+    return result
+
+# Example string
+text = """
+Check order's quantity does not exceed the configured value of Quantity check type.
+For orders with lower quantity than Quantity, expect to pass
+
+For orders with greater quantity than Quantity, expect to be rejected due to GIM breach.
+Also for LotQuantity.
+
+Limit Rule 229261
+
+Drivers:
+  Destination[755, eq]: TW-Cash
+  IssueType[issueType, eq]: Equity
+  AppTagValue[323, eq]: TART
+  orderType[40, eq]: Market
+
+Checks:
+  MaxQuantity: 0 [limitCheckId: 780756]
+"""
+
+# Extract and print the drivers and checks
+drivers, checks = extract_sections(text)
+print("Drivers:", drivers)
+print("Checks:", checks)
