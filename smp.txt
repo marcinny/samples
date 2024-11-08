@@ -1,1 +1,21 @@
-test2
+docx=$1
+echo $docx
+rm -rf docx_zip
+mkdir -p docx_zip
+cp $docx docx_zip/temp.zip
+cd docx_zip/
+unzip temp.zip
+cd word/embeddings/
+FILES=*.bin
+echo `ls -la $FILES`
+for f in $FILES
+do
+    echo "processing $f..."
+    fname=${f%.*}
+    dd if=$f of=$fname.pdf bs=1
+    start=`xxd -b $f|grep %PDF -n|awk -F: '{print $1}'`
+    start1=$(((start-1)*6))
+    end=`xxd -b $f|grep %%EOF -n|awk -F: '{print $1}'`
+    end1=$(((end-1)*6+5*2))
+    dd skip=$start1 count=$end1 if=$f of=$fname.pdf bs=1
+done
