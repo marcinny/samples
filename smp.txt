@@ -1,1 +1,46 @@
-test 1
+import zipfile
+import os
+
+# Paths
+docx_file_path = "/path/to/your/document.docx"
+output_folder = "/path/to/output/folder"
+
+# Create output directory if it doesn't exist
+os.makedirs(output_folder, exist_ok=True)
+
+# Function to identify file type based on the file header
+def identify_file_type(file_path):
+    with open(file_path, 'rb') as f:
+        header = f.read(4)  # Read the first 4 bytes
+        if header.startswith(b'%PDF'):
+            return 'pdf'
+        elif header.startswith(b'PK\x03\x04'):
+            return 'zip'  # Zip files (could be Outlook files if it's a zip of emails)
+        elif header[0:2] == b'\xD0\xCF':  # OLE2 files (like .msg)
+            return 'ole'
+        else:
+            return 'unknown'
+
+# Open the .docx file as a zip archive
+with zipfile.ZipFile(docx_file_path, 'r') as docx_zip:
+    for file_info in docx_zip.infolist():
+        # Look for embedded objects in the 'word/embeddings' folder
+        if file_info.filename.startswith('word/embeddings/'):
+            extracted_path = os.path.join(output_folder, file_info.filename.split('/')[-1])
+            # Extract the embedded file
+            with open(extracted_path, 'wb') as output_file:
+                output_file.write(docx_zip.read(file_info))
+            print(f"Extracted: {extracted_path}")
+            
+            # Identify the file type
+            file_type = identify_file_type(extracted_path)
+            print(f"File type of {extracted_path}: {file_type}")
+
+            # Rename the file based on its type
+            if file_type == 'pdf':
+                os.rename(extracted_path, extracted_path.replace(".bin", ".pdf"))
+            elif file_type == 'ole':
+                os.rename(extracted_path, extracted_path.replace(".bin", ".msg"))
+            elif file_type == 'zip':
+                os.rename(extracted_path, extracted_path.replace(".bin", ".zip"))
+            # Add more conditions here for other file types if needed
