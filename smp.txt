@@ -1,1 +1,25 @@
-nice1
+Sub ExtractAndSaveEmbeddedFiles()
+  Dim objEmbeddedShape As InlineShape
+  Dim strShapeType As String, strEmbeddedDocName As String
+  Dim objEmbeddedDoc As Object
+ 
+  With ActiveDocument
+  For Each objEmbeddedShape In .InlineShapes
+ 
+  '  Find and open the embedded doc.
+  strShapeType = objEmbeddedShape.OLEFormat.ClassType
+  objEmbeddedShape.OLEFormat.Open
+ 
+  '  Initialization
+  Set objEmbeddedDoc = objEmbeddedShape.OLEFormat.Object
+ 
+  '  Save embedded files with names as same as those of icon label. 
+  strEmbeddedDocName = objEmbeddedShape.OLEFormat.IconLabel
+  objEmbeddedDoc.SaveAs "C:\Users\Public\Documents\New folder\" & strEmbeddedDocName
+  objEmbeddedDoc.Close
+ 
+  Set objEmbeddedDoc = Nothing
+ 
+  Next objEmbeddedShape
+  End With
+End Sub
