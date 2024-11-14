@@ -1,25 +1,56 @@
-Sub ExtractAndSaveEmbeddedFiles()
-  Dim objEmbeddedShape As InlineShape
-  Dim strShapeType As String, strEmbeddedDocName As String
-  Dim objEmbeddedDoc As Object
- 
-  With ActiveDocument
-  For Each objEmbeddedShape In .InlineShapes
- 
-  '  Find and open the embedded doc.
-  strShapeType = objEmbeddedShape.OLEFormat.ClassType
-  objEmbeddedShape.OLEFormat.Open
- 
-  '  Initialization
-  Set objEmbeddedDoc = objEmbeddedShape.OLEFormat.Object
- 
-  '  Save embedded files with names as same as those of icon label. 
-  strEmbeddedDocName = objEmbeddedShape.OLEFormat.IconLabel
-  objEmbeddedDoc.SaveAs "C:\Users\Public\Documents\New folder\" & strEmbeddedDocName
-  objEmbeddedDoc.Close
- 
-  Set objEmbeddedDoc = Nothing
- 
-  Next objEmbeddedShape
-  End With
-End Sub
+import pyperclip
+import keyboard
+import time
+import os
+
+# File to save clipboard history
+clipboard_history_file = "clipboard_history.txt"
+
+# Function to load clipboard history from the file
+def load_clipboard_history():
+    if os.path.exists(clipboard_history_file):
+        with open(clipboard_history_file, "r", encoding="utf-8") as file:
+            return file.readlines()
+    return []
+
+# Function to save new clipboard content to the file
+def save_to_file(content):
+    with open(clipboard_history_file, "a", encoding="utf-8") as file:
+        file.write(content + "\n")
+
+# Function to manipulate clipboard content
+def manipulate_content(content):
+    # Remove tab characters from content
+    return content.replace("\t", "")
+
+def main():
+    clipboard_history = load_clipboard_history()
+    previous_content = pyperclip.paste()
+
+    print("Clipboard manager is running... Press 'ctrl+shift+m' to manipulate the clipboard content.")
+
+    while True:
+        try:
+            current_content = pyperclip.paste()
+            # If new content is copied to the clipboard
+            if current_content != previous_content:
+                previous_content = current_content
+                if current_content + "\n" not in clipboard_history:
+                    clipboard_history.append(current_content + "\n")
+                    save_to_file(current_content)
+                    print(f"New content copied: {current_content}")
+
+            # If the user presses the hotkey to manipulate the content
+            if keyboard.is_pressed("ctrl+shift+m"):
+                manipulated_content = manipulate_content(current_content)
+                pyperclip.copy(manipulated_content)
+                print(f"Content manipulated: {manipulated_content}")
+                time.sleep(1)  # Prevent multiple triggers
+
+            time.sleep(0.5)  # Polling interval
+        except KeyboardInterrupt:
+            print("\nClipboard manager stopped.")
+            break
+
+if __name__ == "__main__":
+    main()
